@@ -497,36 +497,48 @@ class HunyuanVideoSampler(Inference):
     @torch.no_grad()
     def predict(
         self,
-        prompt,
+        prompt=None,
+        prompt_embeds=None,
+        prompt_embeds_2=None,
+        attention_mask=None,
+        attention_mask_2=None,
+        negative_prompt=None,
         height=192,
         width=336,
         video_length=129,
         seed=None,
-        negative_prompt=None,
         infer_steps=50,
         guidance_scale=6.0,
         flow_shift=5.0,
         embedded_guidance_scale=None,
         batch_size=1,
         num_videos_per_prompt=1,
+        encode_prompt=False,
         **kwargs,
     ):
         """
-        Predict the image/video from the given text.
+        Predict the image/video from the given text or text embeddings.
 
         Args:
-            prompt (str or List[str]): The input text.
-            kwargs:
-                height (int): The height of the output video. Default is 192.
-                width (int): The width of the output video. Default is 336.
-                video_length (int): The frame number of the output video. Default is 129.
-                seed (int or List[str]): The random seed for the generation. Default is a random integer.
-                negative_prompt (str or List[str]): The negative text prompt. Default is an empty string.
-                guidance_scale (float): The guidance scale for the generation. Default is 6.0.
-                num_images_per_prompt (int): The number of images per prompt. Default is 1.
-                infer_steps (int): The number of inference steps. Default is 100.
+            prompt (str or List[str], optional): The input text prompts. Either prompt or prompt_embeds must be provided.
+            prompt_embeds (torch.Tensor, optional): Pre-computed text embeddings. Can be provided instead of prompt.
+            negative_prompt (str or List[str], optional): The negative text prompt. Default is an empty string.
+            height (int): The height of the output video. Default is 192.
+            width (int): The width of the output video. Default is 336.
+            video_length (int): The frame number of the output video. Default is 129.
+            seed (int or List[str]): The random seed for the generation. Default is a random integer.
+            guidance_scale (float): The guidance scale for the generation. Default is 6.0.
+            num_images_per_prompt (int): The number of images per prompt. Default is 1.
+            infer_steps (int): The number of inference steps. Default is 50.
         """
         out_dict = dict()
+
+        # Check if either prompt or prompt_embeds is provided
+        if prompt is None and prompt_embeds is None:
+            raise ValueError("Either `prompt` or `prompt_embeds` must be provided.")
+        
+        if prompt is not None and prompt_embeds is not None:
+            logger.warning("Both `prompt` and `prompt_embeds` provided. `prompt_embeds` will be used.")
 
         # ========================================================================
         # Arguments: seed
@@ -590,9 +602,10 @@ class HunyuanVideoSampler(Inference):
         # ========================================================================
         # Arguments: prompt, new_prompt, negative_prompt
         # ========================================================================
-        if not isinstance(prompt, str):
-            raise TypeError(f"`prompt` must be a string, but got {type(prompt)}")
-        prompt = [prompt.strip()]
+        if prompt_embeds is None:
+            if not isinstance(prompt, str):
+                raise TypeError(f"`prompt` must be a string, but got {type(prompt)}")
+            prompt = [prompt.strip()]
 
         # negative prompt
         if negative_prompt is None or negative_prompt == "":
@@ -630,7 +643,7 @@ class HunyuanVideoSampler(Inference):
                         height: {target_height}
                          width: {target_width}
                   video_length: {target_video_length}
-                        prompt: {prompt}
+                        prompt: {"[prompt_embeds]" if prompt_embeds is not None else prompt}
                     neg_prompt: {negative_prompt}
                           seed: {seed}
                    infer_steps: {infer_steps}
@@ -646,7 +659,11 @@ class HunyuanVideoSampler(Inference):
         # ========================================================================
         start_time = time.time()
         samples = self.pipeline(
-            prompt=prompt,
+            prompt=None if prompt_embeds is not None else prompt,
+            prompt_embeds=prompt_embeds,
+            prompt_embeds_2=prompt_embeds_2,
+            attention_mask=attention_mask,
+            attention_mask_2=attention_mask_2,
             height=target_height,
             width=target_width,
             video_length=target_video_length,
@@ -663,9 +680,14 @@ class HunyuanVideoSampler(Inference):
             is_progress_bar=True,
             vae_ver=self.args.vae,
             enable_tiling=self.args.vae_tiling,
-        )[0]
+            encode_prompt=encode_prompt,
+        )
+        if encode_prompt:
+            return samples
+        else:
+            samples = samples[0]
         out_dict["samples"] = samples
-        out_dict["prompts"] = prompt
+        out_dict["prompts"] = prompt if prompt_embeds is None else "[prompt_embeds]"
 
         gen_time = time.time() - start_time
         logger.info(f"Success, time: {gen_time}")

@@ -1,0 +1,46 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "div_prompt",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/sample_video.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--video-size" , "720" ,"1280" ,
+                "--video-length" ,"129", 
+                "--infer-steps", "50", 
+                "--prompt" ,"prompt.txt" ,
+                "--div-prompt",
+                "--flow-reverse" ,
+                "--save-path", "./results",
+                "--cfg-scale", "6.0",
+                "--text-len", "8192",
+            ]
+        },
+        {
+            "name": "sample",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/sample_video.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--model-base", "/root/HunyuanVideo/ckpts",
+                "--video-size", "720" ,"1280" ,
+                "--video-length", "129",
+                "--infer-steps", "50",
+                "--cfg-scale", "6.0",
+                "--prompt-embed", "/root/HunyuanVideo/results/batch0_scene0_embeddings.pt|||/root/HunyuanVideo/batch0_global_embeddings.pt",
+                "--flow-reverse",
+                "--save-path", "./batch_results",
+                "--save-path-suffix", "/root/HunyuanVideo/results/batch0_scene0_embeddings.pt",
+                "--text-len", "512"
+            ],
+            "justMyCode": false
+        }
+    ]
+}

@@ -99,7 +99,7 @@ def add_extra_models_args(parser: argparse.ArgumentParser):
         help="Dimension of the text encoder hidden states.",
     )
     group.add_argument(
-        "--text-len", type=int, default=256, help="Maximum length of the text input."
+        "--text-len", type=int, default=8192, help="Maximum length of the text input."
     )
     group.add_argument(
         "--tokenizer",
@@ -253,6 +253,17 @@ def add_inference_args(parser: argparse.ArgumentParser):
         "--use-cpu-offload",
         action="store_true",
         help="Use CPU offload for the model load.",
+    )
+    group.add_argument(
+        "--div-prompt",
+        action="store_true",
+        help="divide the prompt into multiple parts and get the embedding for each part.",
+    )
+    group.add_argument(
+        "--prompt-embed",
+        type=str,
+        help="Path to the prompt embedding file. If None, use the prompt from the command line.",
+        default=None,
     )
 
     # ======================== Inference general setting ========================

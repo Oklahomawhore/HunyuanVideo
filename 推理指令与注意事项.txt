@@ -1,0 +1,21 @@
+#### Recorded By FengLang~
+
+### 720p x 1280p  分辨率（约占76G显存）
+python3 sample_video.py \
+    --video-size 720 1280 \
+    --video-length 129 \
+    --infer-steps 50 \
+    --prompt "A cat walks on the grass, realistic style." \
+    --flow-reverse \
+    --use-cpu-offload \
+    --save-path ./results
+
+### 544p x 960p  分辨率（约占43G显存。L20：23分钟）
+python3 sample_video.py \
+    --video-size 544 960 \
+    --video-length 129 \
+    --infer-steps 30 \
+    --prompt "A sexy beauty lying on the beach, realistic style." \
+    --flow-reverse \
+    --use-cpu-offload \
+    --save-path ./results

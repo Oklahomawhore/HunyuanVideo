@@ -288,7 +288,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
             text_encoder = self.text_encoder
 
         # set lora scale so that monkey patched LoRA
-        # function of text encoder can correctly access it
+        # function of text encoder can correctly access         
         if lora_scale is not None and isinstance(self, LoraLoaderMixin):
             self._lora_scale = lora_scale
 
@@ -678,7 +678,9 @@ class HunyuanVideoPipeline(DiffusionPipeline):
         generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
         latents: Optional[torch.Tensor] = None,
         prompt_embeds: Optional[torch.Tensor] = None,
+        prompt_embeds_2: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
+        attention_mask_2: Optional[torch.Tensor] = None,
         negative_prompt_embeds: Optional[torch.Tensor] = None,
         negative_attention_mask: Optional[torch.Tensor] = None,
         output_type: Optional[str] = "pil",
@@ -699,6 +701,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
         enable_tiling: bool = False,
         n_tokens: Optional[int] = None,
         embedded_guidance_scale: Optional[float] = None,
+        encode_prompt: bool = False,
         **kwargs,
     ):
         r"""
@@ -863,6 +866,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
             clip_skip=self.clip_skip,
             data_type=data_type,
         )
+        
         if self.text_encoder_2 is not None:
             (
                 prompt_embeds_2,
@@ -875,8 +879,8 @@ class HunyuanVideoPipeline(DiffusionPipeline):
                 num_videos_per_prompt,
                 self.do_classifier_free_guidance,
                 negative_prompt,
-                prompt_embeds=None,
-                attention_mask=None,
+                prompt_embeds=prompt_embeds_2,
+                attention_mask=attention_mask_2,
                 negative_prompt_embeds=None,
                 negative_attention_mask=None,
                 lora_scale=lora_scale,
@@ -889,19 +893,33 @@ class HunyuanVideoPipeline(DiffusionPipeline):
             negative_prompt_embeds_2 = None
             prompt_mask_2 = None
             negative_prompt_mask_2 = None
-
+        if encode_prompt:
+            return (prompt_embeds, negative_prompt_embeds, prompt_mask, negative_prompt_mask), (
+                prompt_embeds_2,
+                negative_prompt_embeds_2,
+                prompt_mask_2,
+                negative_prompt_mask_2,
+            )
         # For classifier free guidance, we need to do two forward passes.
         # Here we concatenate the unconditional and text embeddings into a single batch
         # to avoid doing two forward passes
         if self.do_classifier_free_guidance:
-            prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
-            if prompt_mask is not None:
-                prompt_mask = torch.cat([negative_prompt_mask, prompt_mask])
-            if prompt_embeds_2 is not None:
-                prompt_embeds_2 = torch.cat([negative_prompt_embeds_2, prompt_embeds_2])
-            if prompt_mask_2 is not None:
-                prompt_mask_2 = torch.cat([negative_prompt_mask_2, prompt_mask_2])
+            try:
+                prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
+            
+                
+                if prompt_mask is not None:
+                    prompt_mask = torch.cat([negative_prompt_mask, prompt_mask])
+                if prompt_embeds_2 is not None:
+                    prompt_embeds_2 = torch.cat([negative_prompt_embeds_2, prompt_embeds_2])
+                if prompt_mask_2 is not None:
+                    prompt_mask_2 = torch.cat([negative_prompt_mask_2, prompt_mask_2])
+            except:
+                logger.error(f"{negative_prompt_embeds.shape} {prompt_embeds.shape}")
+                logger.error(f"{negative_prompt_mask.shape} {prompt_mask.shape}")
 
+                logger.error(f"{negative_prompt_embeds_2.shape} {prompt_embeds_2.shape}")
+                logger.error(f"{negative_prompt_mask_2.shape} {prompt_mask_2.shape}")
 
         # 4. Prepare timesteps
         extra_set_timesteps_kwargs = self.prepare_extra_func_kwargs(
